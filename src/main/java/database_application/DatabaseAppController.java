@@ -4,159 +4,224 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
+import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Optional;
 import java.util.ResourceBundle;
 
 
 public class DatabaseAppController implements Initializable {
 
     @FXML
-    private Button vymazat;
+    private Button deleteButton;
     @FXML
-    private Button pridat;
+    private Button addButton;
     @FXML
-    private Button vypujcit;
+    private Button loadJson;
     @FXML
-    private TableView tabulka;
+    private Button rentButton;
     @FXML
-    private ComboBox<String> vyberTabulky;
+    private TableView table;
+    @FXML
+    private ComboBox<String> selectTableComboBox;
+    @FXML
+    private Label statusLabel;
 
-    private PujceniDAO pujceniDAO;
+    private final RentDAO rentDAO;
 
-    private UzivateleDAO uzivateleDAO;
+    private final UserDAO userDAO;
 
-    private VozidloDAO vozidloDAO;
+    private final CarDAO carDAO;
 
-    private Uzivatel uzivatel;
+    private final User user;
 
-    public DatabaseAppController(PujceniDAO pujceniDAO, UzivateleDAO uzivateleDAO, VozidloDAO vozidloDAO, Uzivatel uzivatel) {
-        this.pujceniDAO = pujceniDAO;
-        this.uzivateleDAO = uzivateleDAO;
-        this.vozidloDAO = vozidloDAO;
-        this.uzivatel = uzivatel;
+    public DatabaseAppController(RentDAO rentDAO, UserDAO userDAO, CarDAO carDAO, User user) {
+        this.rentDAO = rentDAO;
+        this.userDAO = userDAO;
+        this.carDAO = carDAO;
+        this.user = user;
     }
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
-        ObservableList<String> list = vyberTabulky.getItems();
-        list.add("Vozidlo");
-        if (RoleUzivatele.ADMIN == uzivatel.getRole()) {
-            list.add("Uzivatele");
-            list.add("pujceni");
-            vymazat.setVisible(true);
-            pridat.setVisible(true);
-        } else if (RoleUzivatele.ZAMESTNANEC == uzivatel.getRole()) {
-            list.add("pujceni");
-            vymazat.setVisible(true);
-            pridat.setVisible(true);
-        } else if (RoleUzivatele.ZAKAZNIK == uzivatel.getRole()) {
-            vyberTabulky.setValue("Vozidlo");
-            vyberTabulky.setVisible(false);
-            nacistTabulku();
+        ObservableList<String> list = selectTableComboBox.getItems();
+        list.add("Cars");
+        if (UserRole.ADMIN == user.getRole()) {
+            list.add("Users");
+            list.add("Rentals");
+            deleteButton.setVisible(true);
+            addButton.setVisible(true);
+            loadJson.setVisible(true);
+        } else if (UserRole.ZAMESTNANEC == user.getRole()) {
+            list.add("Rentals");
+            deleteButton.setVisible(true);
+            addButton.setVisible(true);
+        } else if (UserRole.ZAKAZNIK == user.getRole()) {
+            selectTableComboBox.setValue("Cars");
+            selectTableComboBox.setVisible(false);
+            loadTable();
         }
 
-//        vyberTabulky.setOnAction(new EventHandler<ActionEvent>() {
-//            @Override
-//            public void handle(ActionEvent event) {
-//
-//            }
-//        });
-    }
 
+    }
     @FXML
-    protected void nacistTabulku() {
-        tabulka.getColumns().clear();
-        switch (vyberTabulky.getValue()) {
-            case "Vozidlo":
-                vypujcit.setVisible(true);
-                ArrayList<Vozidlo> vozidlaList = vozidloDAO.nacistVozidla();
+    protected void loadJson() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Choose JSON file");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JSON files", "*.json"));
+        File file = fileChooser.showOpenDialog(new Stage());
+        if (file == null) {
+            return;
+        }
+        switch (selectTableComboBox.getValue()) {
+            case "Cars":
+                statusLabel.setText(carDAO.loadCarsFromJson(file));
+                break;
+            case "Users":
+                userDAO.loadUsersFromJson(file);
+                break;
+        }
+        loadTable();
+    }
+// load taables from database based on selected value in combobox
+    @FXML
+    protected void loadTable() {
+        table.getColumns().clear();
+        switch (selectTableComboBox.getValue()) {
+            case "Cars":
+                rentButton.setVisible(true);
+                ArrayList<Car> vozidlaList = carDAO.loadAllCars();
 
                 TableColumn modelColumn = new TableColumn("Model");
-                TableColumn znackaColumn = new TableColumn("Znacka");
+                TableColumn znackaColumn = new TableColumn("Brand");
                 TableColumn spzColumn = new TableColumn("SPZ");
 
                 modelColumn.setCellValueFactory(new PropertyValueFactory<>("model"));
-                znackaColumn.setCellValueFactory(new PropertyValueFactory<>("znacka"));
+                znackaColumn.setCellValueFactory(new PropertyValueFactory<>("brand"));
                 spzColumn.setCellValueFactory(new PropertyValueFactory<>("SPZ"));
 
-                ObservableList<Vozidlo> data = FXCollections.observableArrayList(vozidlaList);
-                tabulka.setItems(data);
-                tabulka.getColumns().addAll(modelColumn, znackaColumn, spzColumn);
+                ObservableList<Car> data = FXCollections.observableArrayList(vozidlaList);
+                table.setItems(data);
+                table.getColumns().addAll(modelColumn, znackaColumn, spzColumn);
                 break;
-            case "Uzivatele":
-                vypujcit.setVisible(false);
-                ArrayList<Uzivatel> uzivatelList = uzivateleDAO.nacistUzivatele();
-                TableColumn jmenoColumn = new TableColumn("Jmeno");
+            case "Users":
+                rentButton.setVisible(false);
+                ArrayList<User> userList = userDAO.loadAllUsers();
+                TableColumn nameColumn = new TableColumn("Name");
                 TableColumn roleColumn = new TableColumn("Role");
 
-                jmenoColumn.setCellValueFactory(new PropertyValueFactory<>("jmeno"));
+                nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
                 roleColumn.setCellValueFactory(new PropertyValueFactory<>("role"));
-                ObservableList<Uzivatel> data1 = FXCollections.observableArrayList(uzivatelList);
-                tabulka.setItems(data1);
-                tabulka.getColumns().addAll(jmenoColumn, roleColumn);
+                ObservableList<User> data1 = FXCollections.observableArrayList(userList);
+                table.setItems(data1);
+                table.getColumns().addAll(nameColumn, roleColumn);
                 break;
-            case "pujceni":
-                vypujcit.setVisible(false);
-                ArrayList<Pujceni> pujceniList = pujceniDAO.nacistPujceni();
-                TableColumn jmenoZakaznikaColumn = new TableColumn("Jmeno Zakaznika");
-                TableColumn prijmeniZakaznikaColumn = new TableColumn("Prijmeni Zakaznika");
-                TableColumn cisloDokladuZakaznikaColumn = new TableColumn("Cislo Dokladu Zakaznika");
+            case "Rentals":
+                rentButton.setVisible(false);
+                ArrayList<Rent> rentList = rentDAO.loadAllRentals();
+                TableColumn customerNameColumn = new TableColumn("Customer Name");
+                TableColumn car = new TableColumn("Car");
+                TableColumn documentNumber = new TableColumn("Identity Card Number");
+                TableColumn since = new TableColumn("Since");
+                TableColumn until = new TableColumn("Until");
 
-                jmenoZakaznikaColumn.setCellValueFactory(new PropertyValueFactory<>("jmenoZakaznika"));
-                prijmeniZakaznikaColumn.setCellValueFactory(new PropertyValueFactory<>("prijmeniZakaznika"));
-                cisloDokladuZakaznikaColumn.setCellValueFactory(new PropertyValueFactory<>("cisloDokladuZakaznika"));
-                ObservableList<Pujceni> data2 = FXCollections.observableArrayList(pujceniList);
-                tabulka.setItems(data2);
-                tabulka.getColumns().addAll(jmenoZakaznikaColumn, prijmeniZakaznikaColumn, cisloDokladuZakaznikaColumn);
+                customerNameColumn.setCellValueFactory(new PropertyValueFactory<>("customerName"));
+                car.setCellValueFactory(new PropertyValueFactory<>("spz"));
+                documentNumber.setCellValueFactory(new PropertyValueFactory<>("customerDrivingLicenseCardNumber"));
+                since.setCellValueFactory(new PropertyValueFactory<>("since"));
+                until.setCellValueFactory(new PropertyValueFactory<>("until"));
+                ObservableList<Rent> data2 = FXCollections.observableArrayList(rentList);
+                table.setItems(data2);
+                table.getColumns().addAll(customerNameColumn, car, documentNumber, since, until);
         }
 
     }
-
+// add to table based on value in combobox
     @FXML
-    protected void pridatDoTabulky() {
-        switch (vyberTabulky.getValue()) {
-            case "Vozidlo":
-                VozidloHandler.vozidlaDialog(vozidloDAO);
+    protected void addToTable() {
+        switch (selectTableComboBox.getValue()) {
+            case "Cars":
+                CarHelper.carDialog(carDAO);
                 break;
-            case "Uzivatele":
-                UzivateleHandler.uzivateleDialog(uzivateleDAO);
+            case "Users":
+                UserHelper.uzivateleDialog(userDAO);
                 break;
-            case "pujceni":
-                Stage dialog2 = new Stage();
-                dialog2.initModality(Modality.APPLICATION_MODAL);
-                TextField jmenoZakaznika = new TextField();
-                TextField prijmeniZakaznika = new TextField();
-                TextField cisloDokladuZakaznika = new TextField();
-                pujceniDAO.pridatPujceni(jmenoZakaznika.getText(), prijmeniZakaznika.getText(), cisloDokladuZakaznika.getText());
-                break;
+                case "Rentals":
+                    statusLabel.setText("You can't add rentals");
         }
-        nacistTabulku();
-
+        loadTable();
     }
-
+// delete from table based on value in combobox
     @FXML
     protected void vymazatZTabulky() {
-        switch (vyberTabulky.getValue()) {
-            case "Vozidlo":
-                Vozidlo vybrano = (Vozidlo) tabulka.getSelectionModel().getSelectedItem();
-                vozidloDAO.vymazatVozidlo(vybrano.getSPZ());
+        switch (selectTableComboBox.getValue()) {
+            case "Cars":
+                Car vybrano = (Car) table.getSelectionModel().getSelectedItem();
+                carDAO.deleteCar(vybrano.getSPZ());
                 break;
-            case "Uzivatel":
-                Uzivatel vybrano1 = (Uzivatel) tabulka.getSelectionModel().getSelectedItem();
-                uzivateleDAO.vymazatUzivatele(vybrano1.getJmeno());
+            case "Users":
+                User vybrano1 = (User) table.getSelectionModel().getSelectedItem();
+                userDAO.deleteUser(vybrano1.getName());
                 break;
-            case "pujceni":
-                Pujceni vybrano2 = (Pujceni) tabulka.getSelectionModel().getSelectedItem();
-                pujceniDAO.vymazatPujceni(vybrano2.getJmenoZakaznika(), vybrano2.getPrijmeniZakaznika());
+            case "Rentals":
+                Rent vybrano2 = (Rent) table.getSelectionModel().getSelectedItem();
+                rentDAO.deleteRent(vybrano2);
                 break;
         }
-        nacistTabulku();
+        loadTable();
     }
+    // táta pomohl
+// rent car
+    @FXML
+    protected void rentACar() {
+        final Rent rent = new Rent();
+        rent.setCar((Car) table.getSelectionModel().getSelectedItem());
 
+        Stage dialog = new Stage();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+
+        VBox vbox = new VBox(10);
+        String confirmationText = "Are you sure you want to rent this car?: " + ((Car) table.getSelectionModel().getSelectedItem()).getModel() + " " + ((Car) table.getSelectionModel().getSelectedItem()).getBrand() + " " + ((Car) table.getSelectionModel().getSelectedItem()).getSPZ();
+        Label label = new Label(confirmationText);
+        Button confirm = new Button("Confirm");
+        if(user.getRole() != UserRole.ZAKAZNIK) {
+            TextField name = new TextField();
+            name.setOnKeyTyped(e -> {
+                if (!name.getText().isEmpty()) {
+                    Optional<User> foundCustomer = userDAO.findCustomer(name.getText());
+                    if (foundCustomer.isPresent()) {
+                        confirm.setDisable(false);
+                        rent.setCustomer(foundCustomer.get());
+                        label.setText(confirmationText + "\nfor customer: " + rent.getCustomer().getName());
+                    } else {
+                        confirm.setDisable(true);
+                        label.setText(confirmationText);
+                    }
+                } else {
+                    confirm.setDisable(true);
+                    label.setText(confirmationText);
+                }
+            });
+            vbox.getChildren().addAll(new Label("Customer Name"), name);
+        } else {
+            rent.setCustomer(user);
+        }
+        confirm.setOnAction(e -> {
+            rentDAO.rentACar(rent);
+            dialog.close();
+            statusLabel.setText("Car rented: " + rent.getCar().getModel() + " " + rent.getCar().getBrand() + " " + rent.getCar().getSPZ());
+        });
+        vbox.getChildren().addAll(label, confirm);
+        dialog.setScene(new Scene(vbox, 300, 200));
+        dialog.showAndWait();
+    }
 }

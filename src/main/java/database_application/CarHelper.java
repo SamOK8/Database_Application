@@ -8,22 +8,23 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
-public class VozidloHandler {
-    public static void vozidlaDialog(VozidloDAO vozidloDAO) {
+public class CarHelper {
+    //open dialog to add car
+    public static void carDialog(CarDAO carDAO) {
         Stage dialog = new Stage();
         dialog.initModality(Modality.APPLICATION_MODAL);
 
         VBox vbox = new VBox(10);
         TextField model = new TextField();
-        TextField znacka = new TextField();
+        TextField brand = new TextField();
         TextField spz = new TextField();
-        Button potvrdit = new Button("Potvrdit");
-        potvrdit.setOnAction(e ->{
-            vozidloDAO.pridatVozidlo(model.getText(), znacka.getText(), spz.getText());
+        Button confirm = new Button("Confirm");
+        confirm.setOnAction(e ->{
+            carDAO.createCar(spz.getText(), brand.getText(), model.getText());
             dialog.close();
         });
-        vbox.getChildren().addAll(new Label("Model"), model, new Label("Znacka"), znacka, new Label("SPZ"), spz, potvrdit);
-        dialog.setScene(new Scene(vbox, 300, 200));
+        vbox.getChildren().addAll(new Label("Model"), model, new Label("Brand"), brand, new Label("SPZ"), spz, confirm);
+        dialog.setScene(new Scene(vbox, 400, 300));
         dialog.showAndWait();
     }
 

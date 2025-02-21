@@ -1,5 +1,5 @@
 package database_application;
 
-public enum RoleUzivatele {
+public enum UserRole {
     ADMIN, ZAMESTNANEC, ZAKAZNIK
 }

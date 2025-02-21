@@ -6,19 +6,20 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.sql.Connection;
 
 
-public class ApplicationPujcovna extends Application {
+public class DatabaseApplication extends Application {
 
 
     @Override
-    public void start(Stage stage) throws IOException {
+    public void start(Stage stage) throws IOException, URISyntaxException {
         Connection connection = MSSQLConnection.getConnection();
-        UzivateleDAO uzivateleDAO = new UzivateleDAO(connection);
+        UserDAO userDAO = new UserDAO(connection);
 
-        FXMLLoader fxmlLoader = new FXMLLoader(ApplicationPujcovna.class.getResource("connectionWindow.fxml"));
-        fxmlLoader.setControllerFactory(t -> new LoginController(uzivateleDAO));
+        FXMLLoader fxmlLoader = new FXMLLoader(DatabaseApplication.class.getResource("connectionWindow.fxml"));
+        fxmlLoader.setControllerFactory(t -> new LoginController(userDAO));
         Scene scene = new Scene(fxmlLoader.load(), 320, 240);
         stage.setTitle("Database System");
         stage.setScene(scene);
